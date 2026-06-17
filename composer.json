@@ -1,0 +1,18 @@
+{
+    "name": "yiipress/markdown",
+    "description": "Native PHP Markdown-to-HTML extension powered by bundled MD4C.",
+    "type": "php-ext",
+    "license": "BSD-3-Clause",
+    "require": {
+        "php": ">=8.3"
+    },
+    "extra": {
+        "php-ext": {
+            "extension-name": "markdown",
+            "download-url-method": [
+                "pre-packaged-binary",
+                "composer-default"
+            ]
+        }
+    }
+}

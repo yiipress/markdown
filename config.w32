@@ -1,0 +1,11 @@
+ARG_ENABLE("markdown", "Markdown support", "no");
+
+if (PHP_MARKDOWN != "no") {
+	var markdownVersion = WScript.CreateObject("WScript.Shell").Environment("Process")("MARKDOWN_VERSION");
+	if (!markdownVersion) {
+		markdownVersion = "0.1.0";
+	}
+	ADD_FLAG("CFLAGS_MARKDOWN", "/D PHP_MARKDOWN_VERSION=\\\"" + markdownVersion + "\\\"");
+
+	EXTENSION("markdown", "markdown.c third_party/md4c/md4c.c third_party/md4c/md4c-html.c third_party/md4c/entity.c");
+}

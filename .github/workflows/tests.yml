@@ -1,0 +1,38 @@
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+    tags:
+      - '*'
+  workflow_dispatch:
+
+jobs:
+  phpt:
+    name: PHPT PHP ${{ matrix.php-version }} ${{ matrix.php-variant }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php-version:
+          - '8.3'
+          - '8.4'
+          - '8.5'
+        php-variant:
+          - cli
+        include:
+          - php-version: '8.3'
+            php-variant: zts
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Validate Composer metadata
+        run: composer validate --strict --no-check-publish
+
+      - name: Run PHPT tests
+        run: make test PHP_VERSION=${{ matrix.php-version }} PHP_VARIANT=${{ matrix.php-variant }} MARKDOWN_VERSION=${{ github.ref_type == 'tag' && github.ref_name || github.sha }}
