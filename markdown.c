@@ -74,91 +74,183 @@ static zend_long markdown_default_parser_flags(void)
 		| MD_FLAG_FOOTNOTES;
 }
 
-static bool markdown_read_option_bool(zend_object *object, const char *name, size_t name_len)
+static bool markdown_read_option_bool(zend_object *object, const char *name, size_t name_len, bool *result)
 {
 	zval rv;
-	zval *value = zend_read_property(markdown_options_ce, object, name, name_len, 0, &rv);
+	zval *value = zend_read_property(markdown_options_ce, object, name, name_len, 1, &rv);
 
-	return zend_is_true(value);
+	if (UNEXPECTED(value == NULL || (Z_TYPE_P(value) != IS_TRUE && Z_TYPE_P(value) != IS_FALSE))) {
+		zend_throw_exception_ex(
+			spl_ce_RuntimeException,
+			0,
+			"MarkdownOptions::$%s is uninitialized; MarkdownOptions instances must be constructed via __construct()",
+			name
+		);
+		return false;
+	}
+
+	*result = Z_TYPE_P(value) == IS_TRUE;
+	return true;
 }
 
-static zend_long markdown_read_option_long(zend_object *object, const char *name, size_t name_len)
+static bool markdown_read_option_long(zend_object *object, const char *name, size_t name_len, zend_long *result)
 {
 	zval rv;
-	zval *value = zend_read_property(markdown_options_ce, object, name, name_len, 0, &rv);
+	zval *value = zend_read_property(markdown_options_ce, object, name, name_len, 1, &rv);
 
-	return zval_get_long(value);
+	if (UNEXPECTED(value == NULL || Z_TYPE_P(value) != IS_LONG)) {
+		zend_throw_exception_ex(
+			spl_ce_RuntimeException,
+			0,
+			"MarkdownOptions::$%s is uninitialized; MarkdownOptions instances must be constructed via __construct()",
+			name
+		);
+		return false;
+	}
+
+	*result = Z_LVAL_P(value);
+	return true;
 }
 
-static zend_long markdown_options_to_parser_flags(zend_object *options)
+static bool markdown_option_enabled(zend_object *options, const char *name, size_t name_len, bool *enabled)
+{
+	return markdown_read_option_bool(options, name, name_len, enabled);
+}
+
+static bool markdown_options_to_parser_flags(zend_object *options, zend_long *result)
 {
 	zend_long flags = 0;
+	bool enabled;
 
-	if (markdown_read_option_bool(options, ZEND_STRL("tables"))) {
+	if (!markdown_option_enabled(options, ZEND_STRL("tables"), &enabled)) {
+		return false;
+	}
+	if (enabled) {
 		flags |= MD_FLAG_TABLES;
 	}
-	if (markdown_read_option_bool(options, ZEND_STRL("strikethrough"))) {
+	if (!markdown_option_enabled(options, ZEND_STRL("strikethrough"), &enabled)) {
+		return false;
+	}
+	if (enabled) {
 		flags |= MD_FLAG_STRIKETHROUGH;
 	}
-	if (markdown_read_option_bool(options, ZEND_STRL("tasklists"))) {
+	if (!markdown_option_enabled(options, ZEND_STRL("tasklists"), &enabled)) {
+		return false;
+	}
+	if (enabled) {
 		flags |= MD_FLAG_TASKLISTS;
 	}
-	if (markdown_read_option_bool(options, ZEND_STRL("urlAutolinks"))) {
+	if (!markdown_option_enabled(options, ZEND_STRL("urlAutolinks"), &enabled)) {
+		return false;
+	}
+	if (enabled) {
 		flags |= MD_FLAG_PERMISSIVEURLAUTOLINKS;
 	}
-	if (markdown_read_option_bool(options, ZEND_STRL("emailAutolinks"))) {
+	if (!markdown_option_enabled(options, ZEND_STRL("emailAutolinks"), &enabled)) {
+		return false;
+	}
+	if (enabled) {
 		flags |= MD_FLAG_PERMISSIVEEMAILAUTOLINKS;
 	}
-	if (markdown_read_option_bool(options, ZEND_STRL("wwwAutolinks"))) {
+	if (!markdown_option_enabled(options, ZEND_STRL("wwwAutolinks"), &enabled)) {
+		return false;
+	}
+	if (enabled) {
 		flags |= MD_FLAG_PERMISSIVEWWWAUTOLINKS;
 	}
-	if (markdown_read_option_bool(options, ZEND_STRL("collapseWhitespace"))) {
+	if (!markdown_option_enabled(options, ZEND_STRL("collapseWhitespace"), &enabled)) {
+		return false;
+	}
+	if (enabled) {
 		flags |= MD_FLAG_COLLAPSEWHITESPACE;
 	}
-	if (markdown_read_option_bool(options, ZEND_STRL("latexMath"))) {
+	if (!markdown_option_enabled(options, ZEND_STRL("latexMath"), &enabled)) {
+		return false;
+	}
+	if (enabled) {
 		flags |= MD_FLAG_LATEXMATHSPANS;
 	}
-	if (markdown_read_option_bool(options, ZEND_STRL("wikilinks"))) {
+	if (!markdown_option_enabled(options, ZEND_STRL("wikilinks"), &enabled)) {
+		return false;
+	}
+	if (enabled) {
 		flags |= MD_FLAG_WIKILINKS;
 	}
-	if (markdown_read_option_bool(options, ZEND_STRL("underline"))) {
+	if (!markdown_option_enabled(options, ZEND_STRL("underline"), &enabled)) {
+		return false;
+	}
+	if (enabled) {
 		flags |= MD_FLAG_UNDERLINE;
 	}
-	if (!markdown_read_option_bool(options, ZEND_STRL("htmlBlocks"))) {
+	if (!markdown_option_enabled(options, ZEND_STRL("htmlBlocks"), &enabled)) {
+		return false;
+	}
+	if (!enabled) {
 		flags |= MD_FLAG_NOHTMLBLOCKS;
 	}
-	if (!markdown_read_option_bool(options, ZEND_STRL("htmlSpans"))) {
+	if (!markdown_option_enabled(options, ZEND_STRL("htmlSpans"), &enabled)) {
+		return false;
+	}
+	if (!enabled) {
 		flags |= MD_FLAG_NOHTMLSPANS;
 	}
-	if (markdown_read_option_bool(options, ZEND_STRL("permissiveAtxHeaders"))) {
+	if (!markdown_option_enabled(options, ZEND_STRL("permissiveAtxHeaders"), &enabled)) {
+		return false;
+	}
+	if (enabled) {
 		flags |= MD_FLAG_PERMISSIVEATXHEADERS;
 	}
-	if (markdown_read_option_bool(options, ZEND_STRL("noIndentedCodeBlocks"))) {
+	if (!markdown_option_enabled(options, ZEND_STRL("noIndentedCodeBlocks"), &enabled)) {
+		return false;
+	}
+	if (enabled) {
 		flags |= MD_FLAG_NOINDENTEDCODEBLOCKS;
 	}
-	if (markdown_read_option_bool(options, ZEND_STRL("hardSoftBreaks"))) {
+	if (!markdown_option_enabled(options, ZEND_STRL("hardSoftBreaks"), &enabled)) {
+		return false;
+	}
+	if (enabled) {
 		flags |= MD_FLAG_HARD_SOFT_BREAKS;
 	}
-	if (markdown_read_option_bool(options, ZEND_STRL("spoilers"))) {
+	if (!markdown_option_enabled(options, ZEND_STRL("spoilers"), &enabled)) {
+		return false;
+	}
+	if (enabled) {
 		flags |= MD_FLAG_SPOILERS;
 	}
-	if (markdown_read_option_bool(options, ZEND_STRL("superscripts"))) {
+	if (!markdown_option_enabled(options, ZEND_STRL("superscripts"), &enabled)) {
+		return false;
+	}
+	if (enabled) {
 		flags |= MD_FLAG_SUPERSCRIPTS;
 	}
-	if (markdown_read_option_bool(options, ZEND_STRL("subscripts"))) {
+	if (!markdown_option_enabled(options, ZEND_STRL("subscripts"), &enabled)) {
+		return false;
+	}
+	if (enabled) {
 		flags |= MD_FLAG_SUBSCRIPTS;
 	}
-	if (markdown_read_option_bool(options, ZEND_STRL("admonitions"))) {
+	if (!markdown_option_enabled(options, ZEND_STRL("admonitions"), &enabled)) {
+		return false;
+	}
+	if (enabled) {
 		flags |= MD_FLAG_ADMONITIONS;
 	}
-	if (markdown_read_option_bool(options, ZEND_STRL("footnotes"))) {
+	if (!markdown_option_enabled(options, ZEND_STRL("footnotes"), &enabled)) {
+		return false;
+	}
+	if (enabled) {
 		flags |= MD_FLAG_FOOTNOTES;
 	}
-	if (markdown_read_option_bool(options, ZEND_STRL("highlight"))) {
+	if (!markdown_option_enabled(options, ZEND_STRL("highlight"), &enabled)) {
+		return false;
+	}
+	if (enabled) {
 		flags |= MD_FLAG_HIGHLIGHT;
 	}
 
-	return flags;
+	*result = flags;
+	return true;
 }
 
 static void markdown_update_bool_property(zend_object *object, const char *name, size_t name_len, bool value)
@@ -256,15 +348,23 @@ PHP_METHOD(YiiPress_Markdown_MarkdownOptions, __construct)
 
 PHP_METHOD(YiiPress_Markdown_MarkdownOptions, toParserFlags)
 {
+	zend_long parser_flags;
+
 	ZEND_PARSE_PARAMETERS_NONE();
 
-	RETURN_LONG(markdown_options_to_parser_flags(Z_OBJ_P(ZEND_THIS)));
+	if (!markdown_options_to_parser_flags(Z_OBJ_P(ZEND_THIS), &parser_flags)) {
+		RETURN_THROWS();
+	}
+
+	RETURN_LONG(parser_flags);
 }
 
 PHP_METHOD(YiiPress_Markdown_MarkdownRenderer, __construct)
 {
 	zval *options = NULL;
 	markdown_renderer_object *renderer = Z_MARKDOWN_RENDERER_P(ZEND_THIS);
+	zend_long parser_flags;
+	zend_long renderer_flags;
 
 	ZEND_PARSE_PARAMETERS_START(0, 1)
 		Z_PARAM_OPTIONAL
@@ -277,8 +377,15 @@ PHP_METHOD(YiiPress_Markdown_MarkdownRenderer, __construct)
 		return;
 	}
 
-	renderer->parser_flags = markdown_options_to_parser_flags(Z_OBJ_P(options));
-	renderer->renderer_flags = markdown_read_option_long(Z_OBJ_P(options), ZEND_STRL("rendererFlags"));
+	if (!markdown_options_to_parser_flags(Z_OBJ_P(options), &parser_flags)) {
+		RETURN_THROWS();
+	}
+	if (!markdown_read_option_long(Z_OBJ_P(options), ZEND_STRL("rendererFlags"), &renderer_flags)) {
+		RETURN_THROWS();
+	}
+
+	renderer->parser_flags = parser_flags;
+	renderer->renderer_flags = renderer_flags;
 }
 
 PHP_METHOD(YiiPress_Markdown_MarkdownRenderer, render)
@@ -368,16 +475,17 @@ static PHP_MINIT_FUNCTION(markdown)
 
 	INIT_NS_CLASS_ENTRY(ce, "YiiPress\\Markdown", "MarkdownRenderer", class_YiiPress_Markdown_MarkdownRenderer_methods);
 	markdown_renderer_ce = zend_register_internal_class(&ce);
-	markdown_renderer_ce->ce_flags |= ZEND_ACC_FINAL;
+	markdown_renderer_ce->ce_flags |= ZEND_ACC_FINAL | ZEND_ACC_NOT_SERIALIZABLE | ZEND_ACC_NO_DYNAMIC_PROPERTIES;
 	markdown_renderer_ce->create_object = markdown_renderer_create_object;
 
 	memcpy(&markdown_renderer_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
 	markdown_renderer_handlers.offset = XtOffsetOf(markdown_renderer_object, std);
 	markdown_renderer_handlers.free_obj = markdown_renderer_free_object;
+	markdown_renderer_handlers.clone_obj = NULL;
 
 	INIT_NS_CLASS_ENTRY(ce, "YiiPress\\Markdown", "MarkdownOptions", class_YiiPress_Markdown_MarkdownOptions_methods);
 	markdown_options_ce = zend_register_internal_class(&ce);
-	markdown_options_ce->ce_flags |= ZEND_ACC_FINAL;
+	markdown_options_ce->ce_flags |= ZEND_ACC_FINAL | ZEND_ACC_NO_DYNAMIC_PROPERTIES;
 #if PHP_VERSION_ID >= 80200
 	markdown_options_ce->ce_flags |= ZEND_ACC_READONLY_CLASS;
 #endif
