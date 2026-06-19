@@ -3,6 +3,9 @@
 `yiipress/markdown` is a native PHP extension for rendering Markdown to HTML
 with bundled [MD4C](https://github.com/mity/md4c).
 
+> [!WARNING]
+> This package is deprecated in favor of https://github.com/iliaal/mdparser/.
+
 ## Requirements
 
 - PHP 8.2 - 8.5.
